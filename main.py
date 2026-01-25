@@ -245,7 +245,7 @@ def get_ai_response(prompt, context, subject_name, allow_external=False):
         if not relevant_snippets:
             context_snippet = (context[:20000] + "\n... [SNIP] ...\n" + context[-10000:])[:context_limit]
         else:
-            context_snippet = ""            context_snippet = "\n--- SECTION START ---\n".join(list(set(relevant_snippets)))[:context_limit]
+            context_snippet = "\n--- SECTION START ---\n".join(list(set(relevant_snippets)))[:context_limit]
         
         external_instruction = ""
         if allow_external:
