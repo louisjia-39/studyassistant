@@ -6,6 +6,65 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import datetime
 
+# =========================
+# Weekly Access Password + Admin
+# =========================
+import hmac, hashlib, base64
+from datetime import date
+
+def weekly_password(seed: str) -> str:
+    # ISO week changes on Monday; stable for the whole ISO week
+    year, week, _ = date.today().isocalendar()
+    msg = f"{year}-W{week:02d}".encode()
+    digest = hmac.new(seed.encode(), msg, hashlib.sha256).digest()
+    # 16-ish chars; adjust digest slice if you want longer/shorter
+    return base64.b32encode(digest[:10]).decode().rstrip("=")
+
+def get_secret(name: str):
+    # Streamlit Cloud: st.secrets; Local: env vars
+    try:
+        v = st.secrets.get(name, None)
+        if v:
+            return v
+    except Exception:
+        pass
+    return os.environ.get(name)
+
+# Must be called once, early
+st.set_page_config(page_title="IB Multidisciplinary Study Assistant", layout="wide")
+
+PW_SEED = get_secret("PW_SEED")
+ADMIN_PASSWORD = get_secret("ADMIN_PASSWORD")
+
+if not PW_SEED or not ADMIN_PASSWORD:
+    st.error("Missing PW_SEED / ADMIN_PASSWORD. Please set them in Streamlit Secrets.")
+    st.stop()
+
+THIS_WEEK_PASSWORD = weekly_password(PW_SEED)
+
+with st.sidebar:
+    st.header("🔒 Access Control")
+
+    # Admin section
+    with st.expander("Admin"):
+        admin_in = st.text_input("Admin password", type="password", key="admin_pw")
+        if admin_in == ADMIN_PASSWORD:
+            st.success("Admin unlocked.")
+            st.code(THIS_WEEK_PASSWORD, language="text")
+            st.caption("This is the access password for the current ISO week.")
+        elif admin_in:
+            st.error("Wrong admin password.")
+
+    # User section
+    user_pw = st.text_input("Access password", type="password", key="access_pw")
+
+if user_pw != THIS_WEEK_PASSWORD:
+    st.warning("Enter the weekly access password in the sidebar to continue.")
+    st.stop()
+# =========================
+# End Access Control
+# =========================
+
 # Initialize OpenAI client with user's own API Key
 api_key = os.environ.get("OPENAI_API_KEY")
 
@@ -47,7 +106,7 @@ def init_db():
 
 init_db()
 
-st.set_page_config(page_title="IB Multidisciplinary Study Assistant", layout="wide")
+
 
 st.title("🎓 IB Multidisciplinary Study Assistant")
 
