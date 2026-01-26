@@ -50,7 +50,55 @@ init_db()
 
 st.set_page_config(page_title="IB Multidisciplinary Study Assistant", layout="wide")
 
-st.title("🎓 IB Multidisciplinary Study Assistant")
+st.title("IB Multidisciplinary Study Assistant")
+# --- Access control using weekly password and manager password ---
+# The app requires a new access code every ISO calendar week. A manager can use their
+# own manager password to view the current week's access code.
+import hashlib
+import datetime
+
+MANAGER_PASSWORD = os.environ.get("MANAGER_PASSWORD") or (
+    st.secrets.get("MANAGER_PASSWORD") if hasattr(st, "secrets") else None
+)
+
+def _generate_weekly_password() -> str:
+    """
+    Generate a deterministic weekly password based on the current ISO year/week.
+    The password is derived from a SHA-256 hash of the year-week string and truncated
+    to the first 8 characters. This changes automatically each week but remains
+    constant within a single week.
+    """
+    year, week, _ = datetime.date.today().isocalendar()
+    base = f"{year}-{week}"
+    hashed = hashlib.sha256(base.encode("utf-8")).hexdigest()
+    return hashed[:8]
+
+WEEKLY_PASSWORD = _generate_weekly_password()
+
+if "has_access" not in st.session_state:
+    st.session_state.has_access = False
+
+with st.expander("🔐 Access Control", expanded=not st.session_state.has_access):
+    access_code = st.text_input(
+        "Enter access code", type="password", placeholder="Enter weekly or manager code"
+    )
+    if st.button("Submit Access Code"):
+        if access_code == WEEKLY_PASSWORD:
+            st.session_state.has_access = True
+            st.success(
+                "Access granted for this week. Enjoy using the study assistant!"
+            )
+        elif MANAGER_PASSWORD and access_code == MANAGER_PASSWORD:
+            st.session_state.has_access = True
+            st.info(
+                f"Manager access granted. This week's user access code is: {WEEKLY_PASSWORD}"
+            )
+        else:
+            st.error("Invalid access code. Please try again.")
+
+if not st.session_state.has_access:
+    st.stop()
+linary Study Assistant")
 
 # Sidebar subject and persistent upload
 with st.sidebar:
