@@ -98,7 +98,7 @@ with st.expander("🔐 Access Control", expanded=not st.session_state.has_access
 
 if not st.session_state.has_access:
     st.stop()
-linary Study Assistant")
+l
 
 # Sidebar subject and persistent upload
 with st.sidebar:
