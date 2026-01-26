@@ -206,13 +206,28 @@ def get_ai_response(prompt, context, subject_name, allow_external=False):
         conn = get_db_connection()
         cur = conn.cursor()
         # Search for queries with > 0.4 similarity (fuzzy match)
-        cur.execute("""
-            SELECT query, response 
-            FROM study_history 
-            WHERE subject = %s 
-            AND similarity(query, %s) > 0.4
-            ORDER BY similarity(query, %s) DESC 
-            LIMIT 1
+        #cur.execute("""
+            ##SELECT query, response 
+            #FROM study_histry
+            #WHERE subject = %s 
+            #AND similarity(query, %s) > 0.4
+            #ORDER BY similarity(query, %s) DESC 
+            #LIMIT         # Initialize prev_match and wrap similarity query to handle missing function
+        prev_match = None
+        try:
+            cur.execute("""
+                SELECT query, response
+                FROM study_history
+                WHERE subject = %s
+                AND similarity(query, %s) > 0.4
+                ORDER BY similarity(query, %s) DESC
+                LIMIT 1
+            """, (subject_name, prompt, prompt))
+            prev_match = cur.fetchone()
+        except Exception:
+            # Similarity function might not be available; skip
+            prev_match = None
+
         """, (subject_name, prompt, prompt))
         prev_match = cur.fetchone()
         cur.close()
